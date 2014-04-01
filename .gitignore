@@ -213,3 +213,14 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+
+#modelsim and quartus
+*.mti
+*.mpf
+*.dat
+*.prw
+*.wlf
+*.psm
+*.dbs
+*.vstf
