@@ -224,3 +224,6 @@ pip-log.txt
 *.psm
 *.dbs
 *.vstf
+_info
+_vmake
+transcript
