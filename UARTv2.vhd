@@ -3,19 +3,16 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 
-entity UART is 
+entity UARTv2 is 
 port ( 	clock: 		in std_logic;
 		reset:		in std_logic;
-		TX:			out std_logic;
 		TXValue: 	out std_logic;
-		RX:			in std_logic; 
 		RXValue: 	in std_logic;
-		LED:		out std_logic;
-		TXLED:		out std_logic;
-		RXLED:		out	std_logic
+		LEDRX:		out std_logic:='1';
+		LED:		out std_logic:='1'
 		);
-end UART;
-architecture v of UART is
+end UARTv2;
+architecture v of UARTv2 is
 component sc_uart
 	generic (addr_bits : integer;
 			 clk_freq : integer;
@@ -50,7 +47,9 @@ end component;
 		constant 	readingMode	: 	std_logic_vector(2 downto 0)	:="011";
 		constant 	writingMode	: 	std_logic_vector(2 downto 0)	:="100";
 		constant 	resetMode	: 	std_logic_vector(2 downto 0)	:="101";
-
+		
+		constant	ONER		:	std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(49,32));
+		constant	TWOER		:	std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(50,32));
 
 		--stuff to get the data out from sc
 		signal		TXDataUART	:	std_logic_vector(31 downto 0)	:=std_logic_vector(to_unsigned(0,32));
@@ -58,13 +57,12 @@ end component;
 		signal		rdUART		:	std_logic 						;
 		signal		wrUART		:	std_logic 						:='0';
 		signal		rdyCntUART	:	unsigned(1 downto 0)			;
-		signal		txdUART		:	std_logic 						;
-		signal		rxdUART		:	std_logic 						;
 		signal		nctsUART	:	std_logic 						;
 		signal		nrtsUART	:	std_logic 						;
 		signal		resetUART	:	std_logic   					:='0';
 		signal 		txCLK:	std_logic;
 		signal 		rxCLK:	std_logic;
+		signal 		addUART: 	std_logic_vector(1 downto 0) :="00";
 begin
 
 
@@ -81,31 +79,65 @@ begin
 	port map (
 		clk			=> 	clock,
 		reset		=> 	resetUART,
-		address		=>	"01",
+		address		=>	addUART,
 		wr_data		=>	TXDataUART,
-		rd          =>	rdUART, 
-		wr          =>	'1', 
+		rd          =>	'1', 
+		wr          =>	'0', 
 		rd_data		=>	RXDataUART,
 		rdy_cnt		=> 	rdyCntUART,
 
 		txd			=> 	TXValue,
 		rxd			=> 	RXValue,
-		ncts		=> 	'0',
+		ncts		=> 	'1',
 		nrts		=>	nrtsUART,
 		TXCLK  		=> 	txCLK,
 		RXCLK		=> 	rxCLK
 		);
 
-	process(txCLK)
+	process(clock)
 	begin
+	if rising_edge(clock) then
+		case( state ) is
+		
+			when waiting =>
+				resetUART<='0';
+				addUART <="00";
+				if RXDataUART(1) = '1' then
+					addUART <="01";
+					state <=readWait;
+				end if ;
 
-		if rising_edge(txCLK) then
-			TXDataUART	<= std_logic_vector(counter+48);
-			counter		<=counter+1;	
-			if counter>10 then
-				counter <=to_unsigned(0,32);
-			end if;
-		end if;	
+			when readWait => 
+				if rdyCntUART < 1 then
+					state <=readingMode;
+				end if;
+			when readingMode => 
+				state <=waiting;
+				if RXDataUART = ONER then
+					LED <='0';
+				elsif RXDataUART = TWOER then
+					LED <='1';	
+				end if ;
+				
+			when resetMode => 
+				resetUART <='1';
+				if counter2<10 then
+					state <=resetMode;
+					counter2 <= counter2+1;
+				else
+					state <=waiting;
+					counter2 <=0;
+				end if ;
+
+
+		
+			when others =>
+
+				state <=resetMode;
+		
+		end case ;
+	end if;
+
 	end process;
 
 

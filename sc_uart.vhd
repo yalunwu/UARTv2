@@ -83,7 +83,9 @@ entity sc_uart is
 		txd		: out std_logic;
 		rxd		: in std_logic;
 		ncts	: in std_logic;
-		nrts	: out std_logic
+		nrts	: out std_logic;
+		TXCLK 	: out std_logic;
+		RXCLK 	: out std_logic
 		);
 end sc_uart;
 
@@ -255,7 +257,8 @@ begin
 
 
 		end if;
-
+		TXCLK <=tx_clk;
+		RXCLK <=rx_clk;
 	end process;
 
 
